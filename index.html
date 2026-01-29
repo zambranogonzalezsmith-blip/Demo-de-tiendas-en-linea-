@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Sistema de Ventas Inteligente | Catálogo Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .primary-gradient { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); }
+        .card-anim { transition: all 0.3s ease; }
+        .card-anim:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div id="intro-screen" class="fixed inset-0 z-[100] bg-white flex items-center justify-center p-6">
+        <div class="max-w-md text-center">
+            <div class="w-20 h-20 primary-gradient rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-lg">
+                <i class="fas fa-rocket text-3xl text-white"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-slate-900 mb-4">Demo Sistema de Ventas</h1>
+            <p class="text-slate-600 mb-8 text-lg">Pruebe cómo sus clientes pueden comprar de forma rápida, segura y organizada.</p>
+            
+            <div class="text-left space-y-4 mb-8">
+                <div class="flex items-start gap-4">
+                    <div class="bg-green-100 p-2 rounded-full text-green-600"><i class="fas fa-check"></i></div>
+                    <p class="text-sm text-slate-700"><b>Tasa Automática:</b> Precios siempre actualizados al BCV.</p>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-blue-100 p-2 rounded-full text-blue-600"><i class="fas fa-check"></i></div>
+                    <p class="text-sm text-slate-700"><b>Cero Errores:</b> El sistema saca la cuenta exacta por usted.</p>
+                </div>
+                <div class="flex items-start gap-4">
+                    <div class="bg-purple-100 p-2 rounded-full text-purple-600"><i class="fas fa-check"></i></div>
+                    <p class="text-sm text-slate-700"><b>WhatsApp Directo:</b> Reciba el pedido y el capture del pago al instante.</p>
+                </div>
+            </div>
+            
+            <button onclick="document.getElementById('intro-screen').remove()" class="w-full primary-gradient text-white py-4 rounded-2xl font-bold text-lg shadow-blue-200 shadow-xl hover:scale-105 transition">
+                PROBAR DEMO AHORA
+            </button>
+        </div>
+    </div>
+
+    <nav class="primary-gradient text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-white p-1 rounded-lg"><i class="fas fa-store text-blue-900"></i></div>
+                <div>
+                    <h2 class="font-black text-lg leading-none uppercase">Tienda Demo</h2>
+                    <p class="text-[10px] opacity-80 uppercase font-bold tracking-widest">Tasa BCV: <span id="tasa-display">--</span> Bs</p>
+                </div>
+            </div>
+            <button onclick="abrirCarrito()" class="relative bg-white/20 p-3 rounded-2xl">
+                <i class="fas fa-shopping-cart text-xl"></i>
+                <span id="cart-count" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-blue-900">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-4">
+        <div class="mb-8 max-w-lg mx-auto">
+            <div class="relative">
+                <input type="text" id="buscador" onkeyup="filtrarProductos()" placeholder="Buscar productos de ejemplo..." 
+                class="w-full px-6 py-4 rounded-2xl border-none shadow-md outline-none text-slate-700">
+                <i class="fas fa-search absolute right-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4" id="contenedor-productos"></div>
+    </main>
+
+    <div id="modal-carrito" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] hidden flex justify-end">
+        <div class="bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
+            <div class="p-6 border-b flex justify-between items-center primary-gradient text-white">
+                <h2 class="text-xl font-black uppercase">Resumen de Compra</h2>
+                <button onclick="cerrarCarrito()" class="text-3xl">&times;</button>
+            </div>
+            
+            <div id="lista-carrito" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50"></div>
+
+            <div class="p-6 bg-white border-t space-y-4">
+                <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                    <p class="text-[11px] font-bold text-blue-900 uppercase mb-2">Método de Pago: Pago Móvil</p>
+                    <div class="text-xs text-slate-600">Banesco | 0412-1234567 | J-12345678</div>
+                </div>
+
+                <div class="space-y-3">
+                    <input type="text" id="nombre" placeholder="Nombre del Cliente" class="w-full p-4 rounded-xl border bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="file" id="capture-pago" accept="image/*" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-100 file:text-blue-700">
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border cursor-pointer">
+                        <input type="checkbox" id="querer-delivery" onchange="actualizarUI()" class="w-5 h-5 accent-blue-600">
+                        <span class="text-sm font-bold text-slate-700">¿Incluir Delivery? (+$1.00)</span>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center py-4 border-t">
+                    <span class="font-bold text-slate-400">TOTAL:</span>
+                    <div class="text-right">
+                        <div class="text-3xl font-black text-slate-900" id="total-usd">$0.00</div>
+                        <div class="text-green-600 font-bold" id="total-bs">0.00 Bs</div>
+                    </div>
+                </div>
+
+                <button onclick="finalizarCompra()" class="w-full primary-gradient text-white py-4 rounded-2xl font-bold uppercase shadow-lg shadow-blue-200">
+                    Confirmar por WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let TASA_DOLAR = 54.00;
+        let carrito = {};
+
+        const productos = [
+            { id: 1, nombre: "Producto A (Ejemplo)", precio: 10.50, img: "https://placehold.co/400x400?text=Producto+A" },
+            { id: 2, nombre: "Producto B (Ejemplo)", precio: 5.25, img: "https://placehold.co/400x400?text=Producto+B" },
+            { id: 3, nombre: "Producto C (Ejemplo)", precio: 1.99, img: "https://placehold.co/400x400?text=Producto+C" },
+            { id: 4, nombre: "Producto D (Ejemplo)", precio: 15.00, img: "https://placehold.co/400x400?text=Producto+D" }
+        ];
+
+        async function obtenerTasa() {
+            try {
+                const res = await fetch('https://ve.dolarapi.com/v1/dolares/oficial');
+                const data = await res.json();
+                if(data.promedio) TASA_DOLAR = data.promedio;
+            } catch(e) {}
+            document.getElementById('tasa-display').innerText = TASA_DOLAR.toFixed(2);
+        }
+
+        function renderProductos(filtro = "") {
+            const container = document.getElementById('contenedor-productos');
+            const lista = productos.filter(p => p.nombre.toLowerCase().includes(filtro.toLowerCase()));
+            container.innerHTML = lista.map(p => `
+                <div class="bg-white p-4 rounded-3xl card-anim border border-slate-200">
+                    <img src="${p.img}" class="w-full h-32 object-cover rounded-2xl mb-4 bg-slate-100">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1 uppercase">${p.nombre}</h3>
+                    <p class="text-blue-700 font-black text-xl mb-4">$${p.precio.toFixed(2)}</p>
+                    <button onclick="agregar(${p.id})" class="w-full bg-slate-900 text-white py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition uppercase">Añadir</button>
+                </div>
+            `).join('');
+        }
+
+        function agregar(id) {
+            const p = productos.find(x => x.id === id);
+            carrito[id] = carrito[id] ? { ...p, cant: carrito[id].cant + 1 } : { ...p, cant: 1 };
+            actualizarUI();
+        }
+
+        function eliminar(id) {
+            if(carrito[id].cant > 1) carrito[id].cant--;
+            else delete carrito[id];
+            actualizarUI();
+        }
+
+        function actualizarUI() {
+            const lista = document.getElementById('lista-carrito');
+            const ids = Object.keys(carrito);
+            
+            lista.innerHTML = ids.length === 0 ? `<p class="text-center py-20 text-slate-400">Seleccione productos para la demo</p>` :
+                ids.map(id => `
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                    <div>
+                        <p class="font-bold text-slate-800 text-xs uppercase">${carrito[id].nombre}</p>
+                        <p class="text-[10px] text-slate-400 font-bold">${carrito[id].cant} UNID x $${carrito[id].precio.toFixed(2)}</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="font-black text-blue-900">$${(carrito[id].cant * carrito[id].precio).toFixed(2)}</span>
+                        <button onclick="eliminar(${id})" class="text-red-400 text-xl"><i class="fas fa-minus-circle"></i></button>
+                    </div>
+                </div>`).join('');
+
+            let sub = ids.reduce((a, id) => a + (carrito[id].precio * carrito[id].cant), 0);
+            let deliv = document.getElementById('querer-delivery').checked ? 1 : 0;
+            let total = sub + deliv;
+
+            document.getElementById('total-usd').innerText = `$${total.toFixed(2)}`;
+            document.getElementById('total-bs').innerText = `${(total * TASA_DOLAR).toFixed(2)} Bs`;
+            document.getElementById('cart-count').innerText = ids.reduce((a, id) => a + carrito[id].cant, 0);
+        }
+
+        function finalizarCompra() {
+            const nom = document.getElementById('nombre').value;
+            if(!nom || Object.keys(carrito).length === 0) return alert("Complete los datos de la demo.");
+            
+            // Simular PDF y enviar a WhatsApp (reutiliza tu lógica anterior)
+            alert("¡Excelente! El sistema generaría el PDF y enviaría los datos al WhatsApp del dueño de negocio.");
+        }
+
+        const abrirCarrito = () => document.getElementById('modal-carrito').classList.remove('hidden');
+        const cerrarCarrito = () => document.getElementById('modal-carrito').classList.add('hidden');
+        const filtrarProductos = () => renderProductos(document.getElementById('buscador').value);
+
+        obtenerTasa();
+        renderProductos();
+    </script>
+</body>
+                      </html>
